@@ -93,7 +93,7 @@ final class IdentityServiceProvider extends ServiceProvider
         /*
          * Компоненты кросс-сервисной навигации этот пакет не публикует.
          *
-         * Они живут в npm-пакете `@verdeect/identity-integration-vue`
+         * Они живут в npm-пакете `@verdeect/identity-nav-vue`
          * и приходят продукту зависимостью, а не копированием в `resources/`:
          * опубликованная копия расходилась бы с эталоном на первой же правке.
          */

@@ -43,6 +43,6 @@
         <env name="IDENTITY_SERVICE_CLIENT_SECRET" value="test-service-secret" force="true"/>
         <!-- Хранилище кэша с поддержкой блокировок; Redis в прогоне не нужен. -->
         <env name="IDENTITY_CACHE_STORE" value="array" force="true"/>
-        <env name="BROKER_QUEUE" value="identity-integration.events.testing" force="true"/>
+        <env name="BROKER_QUEUE" value="testing.identity.events" force="true"/>
     </php>
 </phpunit>

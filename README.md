@@ -28,7 +28,8 @@
 на своих экранах.
 
 Компоненты навигации поставляет **отдельный npm-пакет**
-`@verdeect/identity-integration-vue`: этот пакет их не публикует.
+[`@verdeect/identity-nav-vue`](https://github.com/smskin/verdeect-identity-nav-vue):
+этот пакет их не публикует.
 
 ## Быстрый старт
 

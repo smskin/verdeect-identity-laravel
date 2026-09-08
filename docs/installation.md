@@ -47,7 +47,7 @@ php artisan vendor:publish --tag=identity-config
 ```json
 {
     "repositories": [
-        { "type": "path", "options": { "symlink": true }, "url": "../identity-integration-php" }
+        { "type": "path", "options": { "symlink": true }, "url": "../verdeect-identity-laravel" }
     ]
 }
 ```

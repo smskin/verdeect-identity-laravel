@@ -153,8 +153,8 @@ public function share(Request $request): array
 продукт не применяет: второе правило разошлось бы с первым.
 
 Отрисовку рейла и блока пользователя берёт на себя npm-пакет
-`@verdeect/identity-integration-vue` — у него своя документация по встраиванию
-компонентов.
+[`@verdeect/identity-nav-vue`](https://github.com/smskin/verdeect-identity-nav-vue) —
+у него своя документация по встраиванию компонентов.
 
 ## Политика содержимого
 

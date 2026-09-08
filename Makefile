@@ -1,4 +1,4 @@
-# Makefile пакета verdeect/identity-integration
+# Makefile пакета verdeect/identity-laravel
 #
 # Обёртка над сценариями composer и над тем, что композер сценарием не описан:
 # прогон по фильтру, покрытие, проверка манифеста перед тегом. Источник истины

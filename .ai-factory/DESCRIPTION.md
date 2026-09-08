@@ -67,7 +67,7 @@
    из библиотеки увело бы продукт на очередь соседа молча.
 3. **Компоненты интерфейса пакет не публикует.** Рейл навигации и блок
    пользователя живут в соседнем npm-пакете
-   `@verdeect/identity-integration-vue` и приходят продукту зависимостью.
+   `@verdeect/identity-nav-vue` и приходят продукту зависимостью.
    Опубликованная копия расходилась бы с эталоном на первой же правке.
    Публикуется только настройка, группой `identity-config`.
 4. **Решения принимает продукт.** Пакет не уничтожает сессии сам и не
@@ -124,11 +124,12 @@
 ## Связи
 
 - **Потребитель:** cleaner-service (`../cleaner-service`), подключает пакет
-  репозиторием Composer типа `path`.
+  из Packagist обычным `composer require`.
 - **Установка:** identity-service (`../identity-service`) — источник документа
   обнаружения, токенов, профиля, прикладного интерфейса и сообщений.
-- **Компоненты интерфейса:** `@verdeect/identity-integration-vue`
-  (`../identity-integration-vue`).
+- **Компоненты интерфейса:** `@verdeect/identity-nav-vue`
+  (`../verdeect-identity-nav-vue`), публичный репозиторий
+  `smskin/verdeect-identity-nav-vue` на GitHub.
 - **Репозиторий:** `smskin/verdeect-identity-laravel` на GitHub, публичный,
   под лицензией MIT. Пакет опубликован в Packagist и подключается обычным
   `composer require`; первый тег — `v0.1.0`.
