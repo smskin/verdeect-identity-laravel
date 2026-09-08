@@ -129,5 +129,7 @@
   обнаружения, токенов, профиля, прикладного интерфейса и сообщений.
 - **Компоненты интерфейса:** `@verdeect/identity-integration-vue`
   (`../identity-integration-vue`).
-- **Репозиторий:** `verdeect-identity-integration-php` на gitlab.mkomov.com,
-  первый тег — `v0.1.0`.
+- **Репозиторий:** `verdeect/verdeect-identity-integration-laravel`
+  на gitlab.mkomov.com, первый тег — `v0.1.0`. Приватный: реестр Composer
+  в GitLab не включён, продукты подключают git-репозиторий репозиторием
+  Composer типа `vcs` (см. [Установка и настройка](../docs/installation.md)).
