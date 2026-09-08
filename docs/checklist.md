@@ -5,7 +5,12 @@
 
 ## Перед первым входом
 
-- [ ] `composer require verdeect/identity-integration`, провайдер обнаружен
+- [ ] В `composer.json` продукта объявлен репозиторий пакета: приватный
+      `vcs` на gitlab.mkomov.com (или `path` при разработке рядом)
+- [ ] Доступ к репозиторию заведён под способ подключения: токен `read_api`
+      в `auth.json` или `COMPOSER_AUTH` для HTTPS, ключ развёртывания для SSH —
+      и в обоих случаях **вне** `composer.json`
+- [ ] `composer require verdeect/identity-integration:^0.1`, провайдер обнаружен
       (`php artisan route:list --path=auth` показывает три маршрута)
 - [ ] Заданы адрес установки и **оба** клиента с секретами
 - [ ] `IDENTITY_REDIRECT_URI` и `IDENTITY_POST_LOGOUT_REDIRECT_URI` совпадают
