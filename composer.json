@@ -1,0 +1,57 @@
+{
+    "name": "verdeect/identity-integration",
+    "description": "Интеграция продукта установки Verdeect с Identity Service",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.3",
+        "illuminate/support": "^13.0",
+        "illuminate/http": "^13.0",
+        "web-token/jwt-library": "^4.0",
+        "php-amqplib/php-amqplib": "^3.7"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.11",
+        "orchestra/testbench": "^11.2",
+        "pestphp/pest": "^5.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Verdeect\\IdentityIntegration\\": "src/"
+        },
+        "files": [
+            "testing/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Verdeect\\IdentityIntegration\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": [
+            "@php vendor/bin/pest"
+        ],
+        "types:check": [
+            "@php vendor/bin/phpstan analyse --memory-limit=1G"
+        ],
+        "ci:check": [
+            "@types:check",
+            "@test"
+        ]
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Verdeect\\IdentityIntegration\\IdentityServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable"
+}

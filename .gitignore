@@ -1,0 +1,21 @@
+/vendor/
+/.phpunit.cache/
+.phpunit.result.cache
+composer.lock
+.DS_Store
+.idea/
+.vscode/
+/coverage/
+
+# Контекст агентов.
+#
+# Скиллы `aif-*`, агентов и манифест `.ai-factory.json` ставит установщик,
+# и версии у него свои: в репозитории библиотеки они дали бы шумные диффы
+# на каждое обновление. Собственные скиллы пакета — исключение: они описывают
+# именно его границы и соглашения и без него бессмысленны.
+/.ai-factory.json
+/.claude/*
+!/.claude/skills/
+/.claude/skills/*
+!/.claude/skills/identity-package-conventions/
+!/.claude/skills/identity-package-tests/

@@ -1,0 +1,11 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - src
+        - testing
+
+    # Тот же уровень, что у продуктов установки: строгость не снижается
+    # оттого, что код переехал в библиотеку.
+    level: 7

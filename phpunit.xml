@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing" force="true"/>
+        <!--
+            Адрес приложения задаётся здесь, а не берётся из окружения:
+            адреса возврата сверяются точным совпадением, и порт из окружения
+            разработчика делал бы прогон невоспроизводимым.
+        -->
+        <env name="APP_URL" value="http://localhost" force="true"/>
+        <env name="APP_KEY" value="base64:d3xWgsq46Q0Q5ybJ9ah4xhkKjTWsMMVwMCyDlUrvwmA=" force="true"/>
+        <env name="CACHE_STORE" value="array" force="true"/>
+        <env name="QUEUE_CONNECTION" value="sync" force="true"/>
+        <env name="SESSION_DRIVER" value="array" force="true"/>
+        <!--
+            Установка identity в прогоне поддельная: обращения перехватывает
+            `Http::fake()`. Значения обязаны быть непустыми — пакет отвечает
+            на пустую настройку внятным отказом, и он же сработал бы здесь.
+        -->
+        <env name="IDENTITY_BASE_URL" value="https://id.example.test" force="true"/>
+        <env name="IDENTITY_REDIRECT_URI" value="http://localhost/auth/callback" force="true"/>
+        <env name="IDENTITY_POST_LOGOUT_REDIRECT_URI" value="http://localhost/" force="true"/>
+        <env name="IDENTITY_WEB_CLIENT_ID" value="test-web-client" force="true"/>
+        <env name="IDENTITY_WEB_CLIENT_SECRET" value="test-web-secret" force="true"/>
+        <env name="IDENTITY_SERVICE_CLIENT_ID" value="test-service-client" force="true"/>
+        <env name="IDENTITY_SERVICE_CLIENT_SECRET" value="test-service-secret" force="true"/>
+        <!-- Хранилище кэша с поддержкой блокировок; Redis в прогоне не нужен. -->
+        <env name="IDENTITY_CACHE_STORE" value="array" force="true"/>
+        <env name="BROKER_QUEUE" value="identity-integration.events.testing" force="true"/>
+    </php>
+</phpunit>
