@@ -20,7 +20,7 @@
 ## Подключение
 
 ```bash
-composer require verdeect/identity-integration
+composer require verdeect/identity-laravel
 ```
 
 Пакет опубликован в Packagist, исходники —

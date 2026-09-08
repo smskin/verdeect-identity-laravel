@@ -1,7 +1,7 @@
 ---
 name: identity-package-conventions
 description: >-
-  Соглашения и границы пакета verdeect/identity-integration. Применять перед
+  Соглашения и границы пакета verdeect/identity-laravel. Применять перед
   созданием или правкой любого файла в src/, config/, routes/ и testing/:
   правила пространств имён, строгой типизации, Type|null, одинарных кавычек,
   русских докблоков про причину, отказов, журналирования и запрет на ссылки
@@ -14,7 +14,7 @@ metadata:
   category: conventions
 ---
 
-# Соглашения пакета verdeect/identity-integration
+# Соглашения пакета verdeect/identity-laravel
 
 Это **библиотека Composer**, а не приложение. Своего `app/`, базы данных,
 миграций и фронтенда здесь нет и не появится. Всё, что верно для продукта

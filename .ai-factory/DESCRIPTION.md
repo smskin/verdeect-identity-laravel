@@ -1,4 +1,4 @@
-# verdeect/identity-integration
+# verdeect/identity-laravel
 
 ## Обзор
 

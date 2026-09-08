@@ -1,7 +1,7 @@
 ---
 name: identity-package-tests
 description: >-
-  Соглашения наборов пакета verdeect/identity-integration: Pest 5 поверх
+  Соглашения наборов пакета verdeect/identity-laravel: Pest 5 поверх
   orchestra/testbench 11, отсутствие базы данных, оснастка identity* из
   testing/helpers.php, поддельная установка через Http::fake, окружение
   прогона в phpunit.xml. Применять перед созданием или правкой любого файла
@@ -14,7 +14,7 @@ metadata:
   category: testing
 ---
 
-# Наборы пакета verdeect/identity-integration
+# Наборы пакета verdeect/identity-laravel
 
 Прогон: `composer test` (Pest 5 поверх `orchestra/testbench` 11).
 Перед сдачей — `composer ci:check`: PHPStan уровня 7, затем прогон.

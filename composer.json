@@ -1,5 +1,5 @@
 {
-    "name": "verdeect/identity-integration",
+    "name": "verdeect/identity-laravel",
     "description": "Интеграция продукта установки Verdeect с Identity Service",
     "type": "library",
     "license": "MIT",

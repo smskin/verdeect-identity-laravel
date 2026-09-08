@@ -6,7 +6,7 @@
 
 ## О проекте
 
-`verdeect/identity-integration` — библиотека Composer, связывающая продукт
+`verdeect/identity-laravel` — библиотека Composer, связывающая продукт
 установки Verdeect с Identity Service: вход по потоку кода с PKCE, токены,
 профиль, разрешение имён, данные кросс-сервисной навигации и потребление
 сообщений установки. Схема Backend-for-Frontend: токены живут на сервере

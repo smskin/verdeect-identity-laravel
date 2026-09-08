@@ -1,4 +1,4 @@
-# verdeect/identity-integration
+# verdeect/identity-laravel
 
 Интеграция продукта установки Verdeect с Identity Service: поток входа,
 токены, профиль, разрешение имён, данные кросс-сервисной навигации
@@ -33,7 +33,7 @@
 ## Быстрый старт
 
 ```bash
-composer require verdeect/identity-integration
+composer require verdeect/identity-laravel
 ```
 
 Три шага, без которых вход не заработает:
