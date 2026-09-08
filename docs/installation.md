@@ -19,64 +19,14 @@
 
 ## Подключение
 
-Пакет в Packagist **не публикуется**: он приватный и живёт в репозитории
-`verdeect/verdeect-identity-integration-laravel` на gitlab.mkomov.com. Реестр
-Composer в GitLab не включён, поэтому подключается сам git-репозиторий —
-до `composer require` он объявляется в `composer.json` продукта:
-
-```json
-{
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://gitlab.mkomov.com/verdeect/verdeect-identity-integration-laravel.git"
-        }
-    ]
-}
-```
-
 ```bash
-composer require verdeect/identity-integration:^0.1
+composer require verdeect/identity-integration
 ```
 
-### Доступ: HTTPS или SSH
-
-Тот же репозиторий доступен и по SSH — в объявлении меняется только `url`:
-
-```json
-{ "type": "vcs", "url": "git@gitlab.mkomov.com:verdeect/verdeect-identity-integration-laravel.git" }
-```
-
-Выбор между ними — это выбор способа предъявить доступ, а не разные пакеты.
-По HTTPS Composer спросит учётные данные сам; чтобы он не спрашивал на сборке,
-они задаются заранее и **вне** `composer.json` — в `auth.json` или окружением:
-
-```bash
-composer config --global --auth gitlab-token.gitlab.mkomov.com <токен>
-# то же самое окружением, для сборки в контейнере:
-COMPOSER_AUTH='{"gitlab-token":{"gitlab.mkomov.com":"<токен>"}}'
-```
-
-Токену достаточно области `read_api`: пакет только читается.
-
-По SSH учётных данных в `auth.json` не нужно — доступ даёт ключ агента,
-и для сборки это обычно ключ развёртывания с правом только на чтение. Взамен
-окружению нужен доступный ssh-агент и известный узел в `known_hosts`, поэтому
-в контейнерах сборки HTTPS с токеном чаще проще, а на машине разработчика
-SSH удобнее: ключ там уже есть.
-
-### Разработка рядом с продуктом
-
-При разработке пакета рядом с продуктом удобнее репозиторий типа `path` —
-изменения видны без публикации тега:
-
-```json
-{
-    "repositories": [
-        { "type": "path", "options": { "symlink": true }, "url": "../identity-integration-php" }
-    ]
-}
-```
+Пакет опубликован в Packagist, исходники —
+[smskin/verdeect-identity-laravel](https://github.com/smskin/verdeect-identity-laravel).
+Ни объявлять репозиторий в `composer.json`, ни заводить учётные данные
+не требуется.
 
 Провайдер обнаруживается автоматически. Маршруты входа и выхода пакет
 регистрирует сам — объявлять их в продукте не нужно (см.
@@ -87,6 +37,19 @@ SSH удобнее: ключ там уже есть.
 
 ```bash
 php artisan vendor:publish --tag=identity-config
+```
+
+### Разработка рядом с продуктом
+
+При разработке пакета рядом с продуктом удобнее репозиторий типа `path` —
+изменения видны без публикации тега и без ожидания обновления Packagist:
+
+```json
+{
+    "repositories": [
+        { "type": "path", "options": { "symlink": true }, "url": "../identity-integration-php" }
+    ]
+}
 ```
 
 ## Два клиента, и почему их два

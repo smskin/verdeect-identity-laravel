@@ -129,7 +129,6 @@
   обнаружения, токенов, профиля, прикладного интерфейса и сообщений.
 - **Компоненты интерфейса:** `@verdeect/identity-integration-vue`
   (`../identity-integration-vue`).
-- **Репозиторий:** `verdeect/verdeect-identity-integration-laravel`
-  на gitlab.mkomov.com, первый тег — `v0.1.0`. Приватный: реестр Composer
-  в GitLab не включён, продукты подключают git-репозиторий репозиторием
-  Composer типа `vcs` (см. [Установка и настройка](../docs/installation.md)).
+- **Репозиторий:** `smskin/verdeect-identity-laravel` на GitHub, публичный,
+  под лицензией MIT. Пакет опубликован в Packagist и подключается обычным
+  `composer require`; первый тег — `v0.1.0`.

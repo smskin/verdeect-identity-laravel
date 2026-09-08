@@ -2,7 +2,19 @@
     "name": "verdeect/identity-integration",
     "description": "Интеграция продукта установки Verdeect с Identity Service",
     "type": "library",
-    "license": "proprietary",
+    "license": "MIT",
+    "homepage": "https://github.com/smskin/verdeect-identity-laravel",
+    "support": {
+        "issues": "https://github.com/smskin/verdeect-identity-laravel/issues",
+        "source": "https://github.com/smskin/verdeect-identity-laravel"
+    },
+    "keywords": [
+        "laravel",
+        "oidc",
+        "openid-connect",
+        "identity",
+        "sso"
+    ],
     "require": {
         "php": "^8.3",
         "illuminate/support": "^13.0",

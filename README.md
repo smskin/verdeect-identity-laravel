@@ -32,23 +32,8 @@
 
 ## Быстрый старт
 
-Пакет приватный и в Packagist не публикуется — git-репозиторий объявляется
-в `composer.json` продукта (по HTTPS или по SSH — подробности и учётные
-данные в [Установке и настройке](docs/installation.md)):
-
-```json
-{
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://gitlab.mkomov.com/verdeect/verdeect-identity-integration-laravel.git"
-        }
-    ]
-}
-```
-
 ```bash
-composer require verdeect/identity-integration:^0.1
+composer require verdeect/identity-integration
 ```
 
 Три шага, без которых вход не заработает:
