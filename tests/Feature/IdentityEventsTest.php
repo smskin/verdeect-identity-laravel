@@ -169,7 +169,7 @@ it('marks the product once for navigation changed', function (): void {
  * от роли, и смена обязана доходить до рейла без нового входа.
  */
 it('invalidates rail cache on rights change', function (): void {
-    identityFakeServices();
+    identityFakeNavigation();
 
     $client = app(NavigationClient::class);
     $client->for('sub-1');
@@ -180,7 +180,57 @@ it('invalidates rail cache on rights change', function (): void {
 
     $client->for('sub-1');
 
-    expect(identityServicesRequests())->toBe(2);
+    expect(identityNavigationRequests())->toBe(2);
+});
+
+/**
+ * Смена состава навигации обесценивает **обе** записи сразу.
+ *
+ * Отметка `navigation.changed` одна на установку и адресату не принадлежит:
+ * состав меняется для всех, включая тех, кто не входил. Гостевая запись
+ * без этого держалась бы до истечения срока, и новый пункт увидели бы
+ * только вошедшие.
+ */
+it('invalidates both the guest and the user rail on navigation change', function (): void {
+    identityFakeNavigation();
+
+    $client = app(NavigationClient::class);
+    $client->forGuest();
+    $client->for('sub-1');
+
+    app(IdentityEventDispatcher::class)->dispatch(IdentityEvent::fromArray([
+        'id' => 'msg-nav-both',
+        'type' => IdentityEventDispatcher::TYPE_NAVIGATION_CHANGED,
+        'occurred_at' => CarbonImmutable::now()->addMinute()->toIso8601String(),
+    ]));
+
+    $client->forGuest();
+    $client->for('sub-1');
+
+    expect(identityGuestNavigationRequests())->toBe(2)
+        ->and(identityNavigationRequests())->toBe(2);
+});
+
+/**
+ * Смена прав одного человека гостевой записи **не** касается.
+ *
+ * Гостевой набор от роли не зависит — роли у гостя нет, — и сброс общей записи
+ * на каждое `user.rights.changed` означал бы поход к установке за одним и тем
+ * же ответом на каждое изменение прав любого сотрудника.
+ */
+it('leaves the guest rail alone on rights change', function (): void {
+    identityFakeNavigation();
+
+    $client = app(NavigationClient::class);
+    $client->forGuest();
+
+    app(IdentityEventDispatcher::class)->dispatch(
+        identityEvent(IdentityEventDispatcher::TYPE_RIGHTS_CHANGED, ['sub' => 'sub-1']),
+    );
+
+    $client->forGuest();
+
+    expect(identityGuestNavigationRequests())->toBe(1);
 });
 
 /**

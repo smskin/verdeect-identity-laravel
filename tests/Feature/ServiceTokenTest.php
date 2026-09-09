@@ -59,7 +59,7 @@ it('requests identity as the resource', function (): void {
         }
 
         return $request['grant_type'] === 'client_credentials'
-            && $request['scope'] === 'users:read'
+            && $request['scope'] === 'users:read navigation:read'
             && $request['resource'] === identityBaseUrl();
     });
 });

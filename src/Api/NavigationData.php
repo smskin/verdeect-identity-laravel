@@ -5,11 +5,22 @@ declare(strict_types=1);
 namespace Verdeect\IdentityIntegration\Api;
 
 /**
- * Данные рейла кросс-сервисной навигации для одного человека.
+ * Данные рейла кросс-сервисной навигации.
  *
  * Пункты приходят **уже отфильтрованными по роли** и в порядке отображения.
  * Своих правил видимости продукт не применяет: их целиком знает установка
  * (справка 7.3, критерий 90).
+ *
+ * **Форма одна на вошедшего и на гостя.** `sub` из ответа установки ушёл:
+ * он был эхом присланного и ничего не добавлял, а гостевая операция подать
+ * его неоткуда. Вторая форма ради одного отсутствующего поля заставила бы
+ * каждого потребителя различать два состава там, где показывать нужно одно
+ * и то же.
+ *
+ * **Пустой `profileUrl` означает «страницы профиля у смотрящего нет».**
+ * У гостя `profile_url` в ответе отсутствует, и необязательное поле
+ * заставило бы различать «не пришло» и «пусто», хотя показывать в обоих
+ * случаях нечего. Тот же приём уже применён к `UserProfile::$email`.
  */
 final readonly class NavigationData
 {
@@ -17,7 +28,6 @@ final readonly class NavigationData
      * @param  list<NavItem>  $items
      */
     public function __construct(
-        public string $sub,
         public string $profileUrl,
         public string $logoUrl,
         public array $items,
@@ -32,7 +42,6 @@ final readonly class NavigationData
         $rows = is_array($payload['items'] ?? null) ? array_values($payload['items']) : [];
 
         return new self(
-            sub: is_string($payload['sub'] ?? null) ? $payload['sub'] : '',
             profileUrl: is_string($payload['profile_url'] ?? null) ? $payload['profile_url'] : '',
             logoUrl: is_string($payload['logo_url'] ?? null) ? $payload['logo_url'] : '',
             // Порядок сохраняется как пришёл; пересортировка запрещена.
@@ -40,9 +49,9 @@ final readonly class NavigationData
         );
     }
 
-    public static function empty(string $sub): self
+    public static function empty(): self
     {
-        return new self(sub: $sub, profileUrl: '', logoUrl: '', items: []);
+        return new self(profileUrl: '', logoUrl: '', items: []);
     }
 
     /**
@@ -51,7 +60,6 @@ final readonly class NavigationData
     public function toArray(): array
     {
         return [
-            'sub' => $this->sub,
             'profileUrl' => $this->profileUrl,
             'logoUrl' => $this->logoUrl,
             'items' => array_map(static fn (NavItem $item): array => $item->toArray(), $this->items),
@@ -75,7 +83,6 @@ final readonly class NavigationData
         $rows = is_array($payload['items'] ?? null) ? array_values($payload['items']) : [];
 
         return new self(
-            sub: (string) ($payload['sub'] ?? ''),
             profileUrl: (string) ($payload['profileUrl'] ?? ''),
             logoUrl: (string) ($payload['logoUrl'] ?? ''),
             items: array_map(NavItem::fromArray(...), $rows),

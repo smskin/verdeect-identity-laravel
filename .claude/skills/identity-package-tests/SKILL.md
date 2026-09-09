@@ -69,7 +69,8 @@ metadata:
 | `identityAccessToken($claims)` | токен доступа (подпись не важна: продукт разбирает его без проверки) |
 | `identityFakeHttp($extra)` | образцы обнаружения и JWKS плюс переданные |
 | `identityAuthenticate($sid, $sub, $withIdToken)` | сессия входа с токенами в хранилище |
-| `identityFakeServices($stub)` / `identityServicesRequests()` | рейл навигации и счётчик обращений |
+| `identityFakeNavigation($userStub, $guestStub)` | обе операции `/api/navigation`: `POST` — рейл вошедшего, `GET` — гостевой |
+| `identityNavigationRequests()` / `identityGuestNavigationRequests()` | счётчики обращений; разведены по глаголу, потому что адрес общий |
 | `identityFakeResolve($stub)` / `identityResolveRequests()` | разрешение имён и счётчик обращений |
 | `identityForgetResolved($sub)` | забыть разрешённое имя |
 

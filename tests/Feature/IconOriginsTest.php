@@ -15,7 +15,7 @@ use Verdeect\IdentityIntegration\Support\IconOrigins;
  * Обнаружено на продукте установки 09.09.2026.
  */
 it('resolves the icon storage origin from the rail', function (): void {
-    identityFakeServices();
+    identityFakeNavigation();
     identityAuthenticate('sid-1', 'sub-1');
 
     expect(app(IconOrigins::class)->forSession())
@@ -29,7 +29,7 @@ it('resolves the icon storage origin from the rail', function (): void {
  * хранилища нельзя.
  */
 it('does not confuse the storage origin with the installation origin', function (): void {
-    identityFakeServices();
+    identityFakeNavigation();
     identityAuthenticate('sid-1', 'sub-1');
 
     expect(app(IconOrigins::class)->forSession())
@@ -41,7 +41,7 @@ it('does not confuse the storage origin with the installation origin', function 
  * для политики содержимого разные источники.
  */
 it('keeps the port as part of the origin', function (): void {
-    identityFakeServices(Http::response(identityServicesResponseWithIcon(
+    identityFakeNavigation(Http::response(identityNavigationResponseWithIcon(
         'http://localhost:59000/identity/navigation/icons/item.svg?signature=stub',
     )));
     identityAuthenticate('sid-1', 'sub-1');
@@ -55,7 +55,7 @@ it('keeps the port as part of the origin', function (): void {
  * один и тот же источник по разу на пункт незачем.
  */
 it('lists an origin once', function (): void {
-    identityFakeServices();
+    identityFakeNavigation();
     identityAuthenticate('sid-1', 'sub-1');
 
     expect(app(IconOrigins::class)->forSession())->toHaveCount(1);
@@ -66,18 +66,34 @@ it('lists an origin once', function (): void {
  * пункт первой буквой имени, и разрешать в политике нечего.
  */
 it('ignores an empty icon url', function (): void {
-    identityFakeServices(Http::response(identityServicesResponseWithIcon('')));
+    identityFakeNavigation(Http::response(identityNavigationResponseWithIcon('')));
     identityAuthenticate('sid-1', 'sub-1');
 
     expect(app(IconOrigins::class)->forSession())->toBe([]);
 });
 
 /**
- * Без сессии рейла нет, а значит нет и изображений из хранилища: разрешать
- * origin на такой странице не за чем.
+ * **На гостевой странице origin'ы не пусты.**
+ *
+ * Прежде список без сессии был пуст, и посылка была верна: рейла нет — значит,
+ * нет и изображений из хранилища. С гостевым рейлом посылка перестала быть
+ * верной: изображения есть, а пустой список означал бы, что обозреватель
+ * заблокирует **все** иконки на каждой странице без входа, показав причину
+ * только в своей консоли.
  */
-it('returns nothing without a session', function (): void {
-    identityFakeHttp();
+it('resolves the icon storage origin for a guest', function (): void {
+    identityFakeNavigation();
+
+    expect(app(IconOrigins::class)->forSession())
+        ->toBe(['https://storage.identity.test']);
+});
+
+/**
+ * Недоступность установки политику содержимого не ломает: разрешать нечего,
+ * потому что и рисовать нечего.
+ */
+it('returns nothing when the guest rail is unavailable', function (): void {
+    identityFakeNavigation(null, Http::response(['error' => 'server_error'], 503));
 
     expect(app(IconOrigins::class)->forSession())->toBe([]);
 });

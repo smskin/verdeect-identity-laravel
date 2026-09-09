@@ -11,7 +11,7 @@ use Verdeect\IdentityIntegration\IdentityServiceProvider;
 it('merges package config', function (): void {
     expect(config('identity.base_url'))->toBe('https://id.example.test')
         ->and(config('identity.web.scopes'))->toBe(['openid', 'profile', 'email'])
-        ->and(config('identity.service.scopes'))->toBe(['users:read']);
+        ->and(config('identity.service.scopes'))->toBe(['users:read', 'navigation:read']);
 });
 
 /**

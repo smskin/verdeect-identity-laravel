@@ -62,14 +62,42 @@ final class IdentityConfig
     }
 
     /**
+     * Области служебного токена.
+     *
+     * Их две: `users:read` открывает разрешение чужих имён, `navigation:read` —
+     * обе операции навигации. Умолчание повторяет обе, потому что продукт
+     * без опубликованной настройки обязан работать целиком, а не наполовину.
+     *
      * @return list<string>
      */
     public function serviceScopes(): array
     {
         /** @var list<string> $scopes */
-        $scopes = config('identity.service.scopes', ['users:read']);
+        $scopes = config('identity.service.scopes', ['users:read', 'navigation:read']);
 
         return $scopes;
+    }
+
+    /**
+     * Срок кэша рейла вошедшего.
+     *
+     * Верхнюю границу задаёт не настройка, а срок подписи ссылок на иконки,
+     * который знает только установка (см. `NavItem`).
+     */
+    public function navigationTtl(): int
+    {
+        return (int) config('identity.cache.navigation_ttl', 3600);
+    }
+
+    /**
+     * Срок кэша гостевого рейла.
+     *
+     * Запись одна на установку, и та же верхняя граница действует сильнее:
+     * протухшая подпись бьёт по каждой странице без сессии сразу.
+     */
+    public function navigationGuestTtl(): int
+    {
+        return (int) config('identity.cache.navigation_guest_ttl', 3600);
     }
 
     public function refreshAheadRatio(): float

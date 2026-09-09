@@ -205,12 +205,15 @@ function identityAuthenticate(
 }
 
 /**
+ * Ответ установки на рейл вошедшего.
+ *
+ * Поля `sub` в нём нет: оно было эхом присланного и из контракта 0.4 ушло.
+ *
  * @return array<string, mixed>
  */
-function identityServicesResponse(): array
+function identityNavigationResponse(): array
 {
     return [
-        'sub' => 'sub-1',
         'profile_url' => identityBaseUrl().'/profile',
         'logo_url' => identityBaseUrl().'/installation/logo',
         'items' => [
@@ -236,6 +239,24 @@ function identityServicesResponse(): array
 }
 
 /**
+ * Ответ установки на гостевой рейл.
+ *
+ * `profile_url` здесь **нет намеренно**, и это значащее отсутствие: страницы
+ * профиля у гостя не существует. Разборщик читает такое поле пустой строкой,
+ * и наборы обязаны проверять именно это, а не выдуманный адрес.
+ *
+ * @return array<string, mixed>
+ */
+function identityGuestNavigationResponse(): array
+{
+    $response = identityNavigationResponse();
+
+    unset($response['profile_url']);
+
+    return $response;
+}
+
+/**
  * Ответ, у пунктов которого одна и та же названная ссылка на иконку.
  *
  * Нужен там, где проверяется не состав рейла, а разбор самой ссылки: адрес
@@ -243,9 +264,9 @@ function identityServicesResponse(): array
  *
  * @return array<string, mixed>
  */
-function identityServicesResponseWithIcon(string $iconUrl): array
+function identityNavigationResponseWithIcon(string $iconUrl): array
 {
-    $response = identityServicesResponse();
+    $response = identityNavigationResponse();
 
     /** @var list<array<string, mixed>> $items */
     $items = $response['items'];
@@ -262,23 +283,54 @@ function identityServicesResponseWithIcon(string $iconUrl): array
     return $response;
 }
 
-function identityFakeServices(mixed $stub = null): void
+/**
+ * Подделка установки для обеих операций навигации.
+ *
+ * **Адрес у них один, различается метод**, и развести образцы по адресу
+ * нельзя: `Http::fake()` сопоставляет ответ адресу, а не глаголу. Ветвление
+ * поэтому живёт внутри замыкания — `GET` отдаёт гостевой набор, `POST`
+ * пользовательский.
+ */
+function identityFakeNavigation(mixed $userStub = null, mixed $guestStub = null): void
 {
     identityFakeHttp([
         identityBaseUrl().'/token' => Http::response([
             'access_token' => 'service-token',
             'expires_in' => 300,
         ]),
-        identityBaseUrl().'/api/users/services' => $stub ?? Http::response(identityServicesResponse()),
+        identityBaseUrl().'/api/navigation' => function ($request) use ($userStub, $guestStub) {
+            if ($request->method() === 'GET') {
+                return $guestStub ?? Http::response(identityGuestNavigationResponse());
+            }
+
+            return $userStub ?? Http::response(identityNavigationResponse());
+        },
     ]);
 }
 
-function identityServicesRequests(): int
+/**
+ * Сколько раз спрошен рейл вошедшего.
+ *
+ * Счётчики разведены по глаголу, а не по адресу: адрес у операций общий,
+ * и один счётчик не отличил бы промах гостевого кэша от промаха
+ * пользовательского.
+ */
+function identityNavigationRequests(): int
+{
+    return identityCountNavigationRequests('POST');
+}
+
+function identityGuestNavigationRequests(): int
+{
+    return identityCountNavigationRequests('GET');
+}
+
+function identityCountNavigationRequests(string $method): int
 {
     $count = 0;
 
-    Http::assertSent(function ($request) use (&$count): bool {
-        if (str_ends_with($request->url(), '/api/users/services')) {
+    Http::assertSent(function ($request) use (&$count, $method): bool {
+        if (str_ends_with($request->url(), '/api/navigation') && $request->method() === $method) {
             $count++;
         }
 

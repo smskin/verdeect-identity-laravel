@@ -41,7 +41,7 @@
 
 ```php
 it('shows the dashboard to a signed in user', function (): void {
-    identityFakeServices();                  // ответы /api/users/services
+    identityFakeNavigation();                // ответы /api/navigation
     identityAuthenticate('sid-1', 'sub-1');  // сессия входа и токены
 
     $this->get('/')->assertOk();
@@ -51,12 +51,12 @@ it('shows the dashboard to a signed in user', function (): void {
 | Функция | Что делает |
 | --- | --- |
 | `identityFakeHttp(array $extra = [])` | документ обнаружения и набор ключей; `$extra` — свои образцы адресов |
-| `identityFakeServices(mixed $stub = null)` | то же плюс ответ `/api/users/services` |
+| `identityFakeNavigation(mixed $userStub = null, mixed $guestStub = null)` | то же плюс обе операции `/api/navigation`: `POST` — рейл вошедшего, `GET` — гостевой |
 | `identityFakeResolve(mixed $stub = null)` | то же плюс ответ `/api/users/resolve` |
 | `identityAuthenticate(string $sid, string $sub, bool $withIdToken = true)` | сессия входа с токенами в хранилище |
 | `identityBaseUrl()` | адрес поддельной установки |
 | `identityAccessToken()`, `identityIdToken()` | токены с нужными утверждениями |
-| `identityServicesRequests()`, `identityResolveRequests()` | сколько обращений ушло — для проверки кэша и пакетности |
+| `identityNavigationRequests()`, `identityGuestNavigationRequests()`, `identityResolveRequests()` | сколько обращений ушло — для проверки кэша и пакетности; счётчики навигации разведены по глаголу, потому что адрес у операций общий |
 | `identityForgetResolved(string $sub)` | сброс кэша имени между проверками |
 
 Сняв `withIdToken`, вы проверяете путь выхода без пригодной подсказки:
@@ -78,7 +78,7 @@ it('sends visitors without a session to the installation login', function (): vo
 
 ```php
 it('never puts tokens into the page', function (): void {
-    identityFakeServices();
+    identityFakeNavigation();
     identityAuthenticate('sid-1', 'sub-1');
 
     $response = $this->get('/');
