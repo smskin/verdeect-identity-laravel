@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Http;
 use Verdeect\IdentityIntegration\Api\NavigationClient;
+use Verdeect\IdentityIntegration\Support\IdentityCache;
 use Verdeect\IdentityIntegration\Events\SessionMarks;
 
 /**
@@ -137,4 +138,47 @@ it('keeps the icon url across the cache round trip', function (): void {
     expect(identityServicesRequests())->toBe(1)
         ->and($cached->items[0]->iconUrl)
         ->toBe('https://storage.identity.test/navigation/icons/item-b.svg?signature=stub');
+});
+
+/**
+ * Запись кэша, положенная прежней версией пакета, не читается.
+ *
+ * Состав записи изменился вместе с переименованием `icon` → `icon_url`,
+ * а ключ прежде состава не учитывал: разборщик 0.2 не находил в старой записи
+ * `iconUrl` и подставлял пустую ссылку — законное значение, означающее
+ * «ссылки не пришло». Рейл показывал заглушки вместо иконок у всех
+ * пользователей продукта до истечения срока кэша, и ни в журнале, ни на экране
+ * отказа при этом не было. Обнаружено на продукте установки после выкатки 0.2.
+ *
+ * Проверяется поведением, а не именем ключа: имя — подробность, а обязанность
+ * состоит в том, чтобы запись прежнего состава не подменяла собой ответ.
+ */
+it('ignores a cache record written by an earlier package version', function (): void {
+    identityFakeServices();
+
+    /*
+     * Запись в прежнем составе: `icon` с идентификатором набора, `iconUrl`
+     * ещё нет. Кладётся под ключом версии 0.1 — того самого, который она
+     * и занимала.
+     */
+    app(IdentityCache::class)->put('services:sub-1', [
+        'sub' => 'sub-1',
+        'logo_url' => null,
+        'items' => [[
+            'id' => 'item-old',
+            'name' => ['ru' => 'Прежний', 'en' => 'Old'],
+            'url' => 'https://old.identity.test/',
+            'icon' => 'pi-users',
+            'order' => 1,
+        ]],
+        'cached_at' => CarbonImmutable::now()->toIso8601String(),
+    ], 3600);
+
+    $data = app(NavigationClient::class)->for('sub-1');
+
+    // Ответ спрошен у установки, а не взят из прежней записи.
+    expect(identityServicesRequests())->toBe(1)
+        ->and(array_map(static fn ($item): string => $item->id, $data->items))
+        ->not->toContain('item-old')
+        ->and($data->items[0]->iconUrl)->not->toBe('');
 });
