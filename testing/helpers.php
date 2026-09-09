@@ -218,14 +218,16 @@ function identityServicesResponse(): array
                 'id' => 'item-b',
                 'name' => ['ru' => 'Пользователи', 'en' => 'Users'],
                 'url' => identityBaseUrl().'/users',
-                'icon' => 'pi-users',
+                // Подписанная ссылка ограниченного срока, а не идентификатор
+                // набора: набора иконок у установки больше нет.
+                'icon_url' => 'https://storage.identity.test/navigation/icons/item-b.svg?signature=stub',
                 'order' => 5,
             ],
             [
                 'id' => 'item-a',
                 'name' => ['ru' => 'Уборка', 'en' => 'Cleaning'],
                 'url' => 'http://localhost/',
-                'icon' => 'pi-home',
+                'icon_url' => 'https://storage.identity.test/navigation/icons/item-a.svg?signature=stub',
                 // Равный порядок: пункты обязаны сохранить порядок ответа.
                 'order' => 5,
             ],

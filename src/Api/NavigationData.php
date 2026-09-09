@@ -61,8 +61,11 @@ final readonly class NavigationData
     /**
      * Чтение записи кэша.
      *
-     * Поля пункта совпадают с полями ответа установки (`id`, `name`, `url`,
-     * `icon`, `order`), поэтому разбор у них один.
+     * **Разбор пункта свой, а не общий с ответом установки.** Прежде формы
+     * совпадали поле в поле; с переименованием `icon` → `icon_url` совпадение
+     * кончилось — ответ несёт `snake_case`, запись кэша `camelCase`, — и
+     * разборщики разведены (`NavItem::fromArray()` против `fromResponse()`).
+     * Прочие поля записи (`profileUrl`, `logoUrl`) в `camelCase` были и раньше.
      *
      * @param  array<string, mixed>  $payload
      */
@@ -75,7 +78,7 @@ final readonly class NavigationData
             sub: (string) ($payload['sub'] ?? ''),
             profileUrl: (string) ($payload['profileUrl'] ?? ''),
             logoUrl: (string) ($payload['logoUrl'] ?? ''),
-            items: array_map(NavItem::fromResponse(...), $rows),
+            items: array_map(NavItem::fromArray(...), $rows),
         );
     }
 }
