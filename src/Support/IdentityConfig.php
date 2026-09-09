@@ -56,7 +56,7 @@ final class IdentityConfig
     public function webScopes(): array
     {
         /** @var list<string> $scopes */
-        $scopes = config('identity.web.scopes', ['openid', 'profile']);
+        $scopes = config('identity.web.scopes', ['openid', 'profile', 'email']);
 
         return $scopes;
     }

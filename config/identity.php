@@ -19,13 +19,22 @@ return [
     'jwks_ttl' => (int) env('IDENTITY_JWKS_TTL', 3600),
 
     /*
-     * Веб-клиент: поток кода авторизации с PKCE. Области — ровно
-     * `openid profile`; `email` не запрашивается, адрес сервису не нужен.
+     * Веб-клиент: поток кода авторизации с PKCE.
+     *
+     * Область `email` запрашивается наравне с `openid` и `profile`: адрес
+     * показывается в блоке пользователя единого входа, и без области
+     * `/userinfo` его не отдаёт вовсе — отсутствующее утверждение неотличимо
+     * от незаполненного поля.
+     *
+     * **Область обязана быть разрешена клиенту в реестре установки.** Токен
+     * с набором меньше запрошенного установка не выдаёт: неразрешённая
+     * область даёт отказ `invalid_scope` на самом входе, а не молчаливое
+     * сужение состава профиля.
      */
     'web' => [
         'client_id' => env('IDENTITY_WEB_CLIENT_ID'),
         'client_secret' => env('IDENTITY_WEB_CLIENT_SECRET'),
-        'scopes' => ['openid', 'profile'],
+        'scopes' => ['openid', 'profile', 'email'],
         'redirect_uri' => env('IDENTITY_REDIRECT_URI'),
         'post_logout_redirect_uri' => env('IDENTITY_POST_LOGOUT_REDIRECT_URI'),
     ],

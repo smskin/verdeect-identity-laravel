@@ -142,7 +142,7 @@ function identityAccessToken(array $claims = []): string
         'sub' => '01K5XQTESTSUBJECT0000000001',
         'sid' => '01K6YTTESTSESSION000000001',
         'client_id' => 'web-client',
-        'scope' => 'openid profile',
+        'scope' => 'openid profile email',
         'roles' => ['user'],
         'entitlements' => [],
         'iat' => $now,
@@ -192,7 +192,7 @@ function identityAuthenticate(
         idToken: $withIdToken ? identityIdToken() : null,
         issuedAt: CarbonImmutable::now(),
         expiresAt: CarbonImmutable::now()->addSeconds(300),
-        scope: 'openid profile',
+        scope: 'openid profile email',
         sid: $sid,
         sub: $sub,
     ));

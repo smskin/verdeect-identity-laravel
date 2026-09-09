@@ -21,6 +21,7 @@ final readonly class UserProfile
         public string $locale,
         public string $shortName,
         public string $initials,
+        public string $email,
     ) {}
 
     /**
@@ -46,6 +47,14 @@ final readonly class UserProfile
             initials: $givenName !== '' && $familyName !== ''
                 ? NameForms::initials($givenName, $familyName)
                 : '',
+
+            /*
+             * Пустая строка означает «адреса нет», а не «адрес пуст»: его
+             * не отдаёт установка, которой не разрешена область `email`,
+             * и он же отсутствует у запасного профиля. Интерфейс на пустое
+             * значение строку адреса просто не показывает.
+             */
+            email: self::string($claims, 'email'),
         );
     }
 
@@ -66,6 +75,7 @@ final readonly class UserProfile
             locale: 'ru',
             shortName: $sub,
             initials: '',
+            email: '',
         );
     }
 
@@ -83,6 +93,7 @@ final readonly class UserProfile
             'locale' => $this->locale,
             'shortName' => $this->shortName,
             'initials' => $this->initials,
+            'email' => $this->email,
         ];
     }
 

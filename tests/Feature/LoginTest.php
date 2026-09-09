@@ -28,7 +28,7 @@ it('redirects to authorize with pkce', function (): void {
         ->and($query['code_challenge_method'])->toBe('S256')
         ->and($query['client_id'])->toBe('test-web-client')
         ->and($query['redirect_uri'])->toBe('http://localhost/auth/callback')
-        ->and($query['scope'])->toBe('openid profile')
+        ->and($query['scope'])->toBe('openid profile email')
         ->and($query['ui_locales'])->toBe('ru')
         ->and($query['state'])->not->toBeEmpty()
         ->and($query['nonce'])->not->toBeEmpty()
