@@ -235,6 +235,33 @@ function identityServicesResponse(): array
     ];
 }
 
+/**
+ * Ответ, у пунктов которого одна и та же названная ссылка на иконку.
+ *
+ * Нужен там, где проверяется не состав рейла, а разбор самой ссылки: адрес
+ * хранилища, порт, пустое значение.
+ *
+ * @return array<string, mixed>
+ */
+function identityServicesResponseWithIcon(string $iconUrl): array
+{
+    $response = identityServicesResponse();
+
+    /** @var list<array<string, mixed>> $items */
+    $items = $response['items'];
+
+    $response['items'] = array_map(
+        static function (array $item) use ($iconUrl): array {
+            $item['icon_url'] = $iconUrl;
+
+            return $item;
+        },
+        $items,
+    );
+
+    return $response;
+}
+
 function identityFakeServices(mixed $stub = null): void
 {
     identityFakeHttp([

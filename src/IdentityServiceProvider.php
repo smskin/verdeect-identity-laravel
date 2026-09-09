@@ -26,6 +26,7 @@ use Verdeect\IdentityIntegration\Profile\IProfileDecorator;
 use Verdeect\IdentityIntegration\Profile\NullProfileDecorator;
 use Verdeect\IdentityIntegration\Profile\ProfileProvider;
 use Verdeect\IdentityIntegration\Support\IdentityCache;
+use Verdeect\IdentityIntegration\Support\IconOrigins;
 use Verdeect\IdentityIntegration\Support\IdentityOrigin;
 use Verdeect\IdentityIntegration\Tokens\TokenExchanger;
 use Verdeect\IdentityIntegration\Tokens\TokenManager;
@@ -71,6 +72,7 @@ final class IdentityServiceProvider extends ServiceProvider
          */
         $this->app->singleton(IdentityProps::class);
         $this->app->singleton(IdentityOrigin::class);
+        $this->app->singleton(IconOrigins::class);
 
         /*
          * Точки расширения объявлены пустыми реализациями: сервис уборки
