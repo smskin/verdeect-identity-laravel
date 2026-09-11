@@ -53,7 +53,7 @@ it('shows the dashboard to a signed in user', function (): void {
 | `identityFakeHttp(array $extra = [])` | документ обнаружения и набор ключей; `$extra` — свои образцы адресов |
 | `identityFakeNavigation(mixed $userStub = null, mixed $guestStub = null)` | то же плюс обе операции `/api/navigation`: `POST` — рейл вошедшего, `GET` — гостевой |
 | `identityFakeResolve(mixed $stub = null)` | то же плюс ответ `/api/users/resolve` |
-| `identityAuthenticate(string $sid, string $sub, bool $withIdToken = true)` | сессия входа с токенами в хранилище |
+| `identityAuthenticate(string $sid, string $sub, bool $withIdToken = true, array $roles = ['user'], array $entitlements = [])` | сессия входа с токенами в хранилище; `$roles` и `$entitlements` кладутся в токен доступа — оттуда их читает `CurrentIdentity` |
 | `identityBaseUrl()` | адрес поддельной установки |
 | `identityAccessToken()`, `identityIdToken()` | токены с нужными утверждениями |
 | `identityNavigationRequests()`, `identityGuestNavigationRequests()`, `identityResolveRequests()` | сколько обращений ушло — для проверки кэша и пакетности; счётчики навигации разведены по глаголу, потому что адрес у операций общий |
@@ -71,6 +71,50 @@ it('sends visitors without a session to the installation login', function (): vo
     identityFakeHttp();
 
     $this->get('/')->assertRedirect(route('identity.login'));
+});
+```
+
+**Маршрут закрыт по роли** — и закрыт сервером, а не разметкой:
+
+```php
+it('keeps a regular employee out of the admin screens', function (): void {
+    identityFakeHttp();
+    identityAuthenticate(roles: ['user']);
+
+    $this->get('/settings')->assertForbidden();
+});
+
+it('lets an administrator in', function (): void {
+    identityFakeHttp();
+    identityAuthenticate(roles: ['admin']);
+
+    $this->get('/settings')->assertOk();
+});
+```
+
+**Запись закрыта при ограничении, а чтение — нет.** Вторая половина здесь
+важнее первой: ограничение закрывает запись, а не доступ к продукту, и набор,
+проверяющий только отказ, пропустил бы экран, ставший недоступным целиком:
+
+```php
+it('denies a write in the read-only mode but keeps reading', function (): void {
+    identityFakeHttp();
+    identityAuthenticate(entitlements: ['read_only']);
+
+    $this->get('/reports')->assertOk();
+    $this->post('/reports', [/* … */])->assertForbidden();
+});
+```
+
+**Незнакомое ограничение тоже закрывает запись.** Проверка стоит строки,
+а ловит расширение прав при появлении второго ограничения в установке:
+
+```php
+it('denies a write for an entitlement the product does not know', function (): void {
+    identityFakeHttp();
+    identityAuthenticate(entitlements: ['something_new']);
+
+    $this->post('/reports', [/* … */])->assertForbidden();
 });
 ```
 

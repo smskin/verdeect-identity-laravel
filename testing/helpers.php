@@ -180,14 +180,31 @@ function identityFakeHttp(array $extra = []): void
  * `$idToken` можно снять: тогда проверяется путь выхода без пригодной
  * подсказки — перенаправление на `/end-session` в этом случае невозможно
  * (справка 4.5).
+ *
+ * `$roles` и `$entitlements` кладутся в токен доступа — оттуда их читает
+ * `CurrentIdentity`. Умолчания повторяют обычного сотрудника без ограничений;
+ * набору, проверяющему маршрут под ролью, довольно передать `['admin']`.
+ * Доводы объявлены здесь, а не оставлены наборам продукта на самостоятельную
+ * сборку токена: иначе каждый продукт воспроизводил бы устройство утверждений,
+ * а с ним и ошибки в нём.
+ *
+ * @param  list<string>  $roles
+ * @param  list<string>  $entitlements
  */
 function identityAuthenticate(
     string $sid = 'sid-1',
     string $sub = 'sub-1',
     bool $withIdToken = true,
+    array $roles = ['user'],
+    array $entitlements = [],
 ): void {
     app(TokenStore::class)->put($sid, new TokenSet(
-        accessToken: identityAccessToken(['sid' => $sid, 'sub' => $sub]),
+        accessToken: identityAccessToken([
+            'sid' => $sid,
+            'sub' => $sub,
+            'roles' => $roles,
+            'entitlements' => $entitlements,
+        ]),
         refreshToken: 'refresh-current',
         idToken: $withIdToken ? identityIdToken() : null,
         issuedAt: CarbonImmutable::now(),
