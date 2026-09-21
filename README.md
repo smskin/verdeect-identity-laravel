@@ -97,7 +97,7 @@ Route::middleware(['identity', 'identity.role:admin'])->group(function (): void 
 ## Прогон
 
 ```bash
-composer test        # 82 набора на orchestra/testbench
+composer test        # 139 наборов на orchestra/testbench
 composer types:check # PHPStan уровень 7
 ```
 
