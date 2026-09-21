@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use GuzzleHttp\Promise\PromiseInterface;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Jose\Component\Core\AlgorithmManager;
 use Jose\Component\Core\JWK;
@@ -186,7 +187,20 @@ function identityFakeHttp(array $extra = []): void
      * обмена подменился бы успехом.
      */
     if (! array_key_exists($endpoint, $extra)) {
-        $extra[$endpoint] = static function (): PromiseInterface {
+        $extra[$endpoint] = static function (Request $request): PromiseInterface {
+            /*
+             * Эндпоинт выдачи один на два потока, и различать их обязательно:
+             * служебный токен клиента не несёт ни `sub`, ни утверждений
+             * о правах, и подставленный вместо пользовательского он обнулил бы
+             * роль и ограничения.
+             */
+            if (($request['grant_type'] ?? null) === 'client_credentials') {
+                return Http::response([
+                    'access_token' => 'service-token',
+                    'expires_in' => 300,
+                ]);
+            }
+
             $sid = session('identity.sid');
             $set = is_string($sid) ? app(TokenStore::class)->get($sid) : null;
 
@@ -353,10 +367,6 @@ function identityNavigationResponseWithIcon(string $iconUrl): array
 function identityFakeNavigation(mixed $userStub = null, mixed $guestStub = null): void
 {
     identityFakeHttp([
-        identityBaseUrl().'/token' => Http::response([
-            'access_token' => 'service-token',
-            'expires_in' => 300,
-        ]),
         identityBaseUrl().'/api/navigation' => function ($request) use ($userStub, $guestStub) {
             if ($request->method() === 'GET') {
                 return $guestStub ?? Http::response(identityGuestNavigationResponse());
