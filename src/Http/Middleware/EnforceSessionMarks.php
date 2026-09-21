@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 use Verdeect\IdentityIntegration\Events\SessionMarks;
+use Verdeect\IdentityIntegration\Http\EndsIdentitySession;
 use Verdeect\IdentityIntegration\Session\IdentitySession;
 use Verdeect\IdentityIntegration\Tokens\TokenStore;
 
@@ -22,6 +23,8 @@ use Verdeect\IdentityIntegration\Tokens\TokenStore;
  */
 final class EnforceSessionMarks
 {
+    use EndsIdentitySession;
+
     public function __construct(
         private readonly IdentitySession $session,
         private readonly SessionMarks $marks,
@@ -51,10 +54,11 @@ final class EnforceSessionMarks
             $this->store->forget($sid);
         }
 
-        $this->session->forget();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        return $this->endSession($request);
+    }
 
-        return RedirectToLogin::respond($request);
+    protected function identitySession(): IdentitySession
+    {
+        return $this->session;
     }
 }
