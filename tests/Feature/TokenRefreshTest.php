@@ -126,3 +126,94 @@ it('refuses an unknown session', function (): void {
     expect(fn () => app(TokenManager::class)->accessTokenFor('sid-unknown'))
         ->toThrow(SessionExpiredException::class);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Принудительный обмен: повод не срок, а устаревшие права
+|--------------------------------------------------------------------------
+*/
+
+it('refreshes a fresh token issued before the mark', function (): void {
+    identityFakeHttp([
+        identityBaseUrl().'/token' => Http::response([
+            'access_token' => 'access-new',
+            'refresh_token' => 'refresh-new',
+            'expires_in' => 300,
+        ]),
+    ]);
+
+    // Токен выдан только что: по сроку обменивать его рано.
+    identityStoredTokens(1.0);
+
+    $token = app(TokenManager::class)->refreshNow('sid-1', CarbonImmutable::now());
+
+    expect($token)->toBe('access-new');
+});
+
+it('keeps a token issued after the mark', function (): void {
+    identityFakeHttp();
+
+    $set = identityStoredTokens(1.0);
+
+    $token = app(TokenManager::class)->refreshNow('sid-1', $set->issuedAt->subSecond());
+
+    expect($token)->toBe('access-current');
+
+    Http::assertNothingSent();
+});
+
+/**
+ * Два отказа, пришедшие одновременно, дают один обмен.
+ *
+ * Отметку времени каждый берёт до блокировки; второй, дождавшись её, видит
+ * токен новее своей отметки — и установку не зовёт. Иначе он предъявил бы
+ * погашенный refresh-токен, и семейство было бы отозвано как украденное
+ * (критерий 86).
+ */
+it('forces the exchange once under concurrency', function (): void {
+    identityFakeHttp([
+        identityBaseUrl().'/token' => Http::response([
+            'access_token' => 'access-new',
+            'refresh_token' => 'refresh-new',
+            'expires_in' => 300,
+        ]),
+    ]);
+
+    identityStoredTokens(1.0);
+
+    $staleBefore = CarbonImmutable::now();
+
+    // Соседний запрос уже обменял токен и держит блокировку.
+    $lock = app(IdentityCache::class)->lock('refresh:sid-1', 10);
+    $lock->get();
+
+    app(TokenStore::class)->put('sid-1', new TokenSet(
+        accessToken: 'access-new',
+        refreshToken: 'refresh-new',
+        idToken: null,
+        issuedAt: $staleBefore->addSecond(),
+        expiresAt: $staleBefore->addSeconds(301),
+        scope: 'openid profile',
+        sid: 'sid-1',
+        sub: 'sub-1',
+    ));
+
+    $lock->release();
+
+    expect(app(TokenManager::class)->refreshNow('sid-1', $staleBefore))->toBe('access-new');
+
+    Http::assertNotSent(fn ($request): bool => str_ends_with($request->url(), '/token'));
+});
+
+it('destroys session when the forced exchange is refused', function (): void {
+    identityFakeHttp([
+        identityBaseUrl().'/token' => Http::response(['error' => 'invalid_grant'], 400),
+    ]);
+
+    identityStoredTokens(1.0);
+
+    expect(fn () => app(TokenManager::class)->refreshNow('sid-1', CarbonImmutable::now()))
+        ->toThrow(SessionExpiredException::class);
+
+    expect(app(TokenStore::class)->get('sid-1'))->toBeNull();
+});

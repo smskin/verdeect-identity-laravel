@@ -8,7 +8,11 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
+use Verdeect\IdentityIntegration\Exceptions\SessionExpiredException;
+use Verdeect\IdentityIntegration\Http\EndsIdentitySession;
 use Verdeect\IdentityIntegration\Rights\CurrentIdentity;
+use Verdeect\IdentityIntegration\Rights\RightsRefresher;
+use Verdeect\IdentityIntegration\Session\IdentitySession;
 
 /**
  * Запрет записи при ограничении учётной записи.
@@ -34,10 +38,23 @@ use Verdeect\IdentityIntegration\Rights\CurrentIdentity;
  *
  * Продукт, не поддерживающий режим ограниченной работы, посредник просто
  * не упоминает. Это его решение, а не умолчание пакета.
+ *
+ * **Перед отказом право перепроверяется один раз** после принудительного
+ * обмена токена (справка 9, «Дополнительно»): снятое ограничение доезжает
+ * до продукта сообщением либо истечением токена, и до тех пор человек видел
+ * бы отказ на записи, которая ему уже разрешена. Повторяется **проверка**,
+ * а не операция: посредник стоит до обработчика, и тело запроса
+ * не выполняется ни разу.
  */
 final class DenyWritesWhenRestricted
 {
-    public function __construct(private readonly CurrentIdentity $identity) {}
+    use EndsIdentitySession;
+
+    public function __construct(
+        private readonly CurrentIdentity $identity,
+        private readonly RightsRefresher $refresher,
+        private readonly IdentitySession $session,
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -45,12 +62,34 @@ final class DenyWritesWhenRestricted
             return $next($request);
         }
 
+        try {
+            $refreshed = $this->refresher->refreshOnce();
+        } catch (SessionExpiredException) {
+            /*
+             * Обмен отвергнут установкой: человек не ограничен в правах,
+             * а больше не вошёл, и отказ сообщал бы о другом.
+             */
+            return $this->endSession($request);
+        }
+
+        if ($refreshed && $this->identity->allowsWrites()) {
+            return $next($request);
+        }
+
         /*
          * Перечень ограничений в журнал не пишется: он сведения об учётной
-         * записи, а для разбора отказа довольно самого факта.
+         * записи, а для разбора отказа довольно самого факта и признака того,
+         * был ли перед ним обмен.
          */
-        Log::debug('[DenyWritesWhenRestricted] write denied');
+        Log::debug('[DenyWritesWhenRestricted.handle] write denied', [
+            'refreshed' => $refreshed,
+        ]);
 
         abort(403);
+    }
+
+    protected function identitySession(): IdentitySession
+    {
+        return $this->session;
     }
 }

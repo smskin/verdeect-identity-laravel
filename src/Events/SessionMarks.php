@@ -43,6 +43,27 @@ final class SessionMarks
     }
 
     /**
+     * Отметка устаревших прав учётной записи.
+     *
+     * **Сессию не гасит** и в `isStale()` не участвует: изменение роли —
+     * не повод выгонять человека, а повод обменять его токен. Права живут
+     * в токене доступа и читаются из него при каждом запросе, поэтому
+     * до обмена продукт видит прежнюю роль (справка 9, пункт 2).
+     *
+     * Отличие от `markSub()` и `markSid()` — именно в этом, и сводить три
+     * отметки в один механизм нельзя: последствия у них разные.
+     */
+    public function markRights(string $sub, CarbonImmutable $at): void
+    {
+        $this->put('mark:rights:'.$sub, $at);
+    }
+
+    public function rightsMark(string $sub): CarbonImmutable|null
+    {
+        return $this->read('mark:rights:'.$sub);
+    }
+
+    /**
      * Отметка состава навигации установки.
      *
      * `navigation.changed` — единственный тип без `sub` и `sid`: состав
