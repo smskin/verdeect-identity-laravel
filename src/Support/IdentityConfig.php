@@ -105,6 +105,21 @@ final class IdentityConfig
         return (float) config('identity.refresh_ahead_ratio', 1 / 3);
     }
 
+    /**
+     * Наименьший промежуток между принудительными обменами токена, секунды.
+     *
+     * **Умолчание задаётся здесь, а не только в файле конфигурации.**
+     * Конфигурация публикуется в продукт, и у продукта, опубликовавшего её
+     * до появления ключа, в файле его нет: без умолчания второго аргумента
+     * дроссель молча обратился бы в ноль.
+     *
+     * Ноль и меньше — дросселя нет, обмен идёт перед каждым отказом.
+     */
+    public function rightsProbeTtl(): int
+    {
+        return (int) config('identity.rights_probe_ttl', 30);
+    }
+
     public function sessionTtlSeconds(): int
     {
         return (int) config('identity.session_ttl_days', 90) * 86400;

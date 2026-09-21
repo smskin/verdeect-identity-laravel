@@ -34,13 +34,58 @@ final class TokenManager
 
     public function accessTokenFor(string $sid): string
     {
+        return $this->resolve(
+            $sid,
+            fn (TokenSet $set): bool => $this->needsRefresh($set),
+            'accessTokenFor',
+        );
+    }
+
+    /**
+     * Обмен по поводу, не связанному со сроком: права устарели.
+     *
+     * Обменивает токен, **выданный раньше** `$staleBefore`, и отдаёт
+     * действующий токен доступа. Поводов два: отметка изменения прав
+     * из сообщения установки и повтор перед отказом по недостаточным правам
+     * (справка 9, «Дополнительно»).
+     *
+     * **Момент, а не признак «обменять во что бы то ни стало».** Два
+     * параллельных запроса, получивших отказ одновременно, берут отметку
+     * времени до блокировки; второй, дождавшись её, видит токен, выданный
+     * уже после своей отметки, и второго обмена не делает. Признак дал бы
+     * два обмена подряд, а с ними — предъявление погашенного refresh-токена
+     * и отзыв семейства (критерий 86).
+     */
+    public function refreshNow(string $sid, CarbonImmutable $staleBefore): string
+    {
+        return $this->resolve(
+            $sid,
+            static fn (TokenSet $set): bool => $set->issuedAt->lessThan($staleBefore),
+            'refreshNow',
+        );
+    }
+
+    /**
+     * Отдать токен доступа, обменяв набор, если он признан устаревшим.
+     *
+     * Порядок один на все поводы обмена: проверка до блокировки, взятие
+     * блокировки по `sid`, **повторная** проверка после её получения, обмен,
+     * сохранение. Разные поводы различаются только правилом `$stale`,
+     * поэтому и живёт этот порядок в одном месте: разойдясь, две его копии
+     * дали бы обмен без блокировки, а это отзыв семейства.
+     *
+     * @param  \Closure(TokenSet): bool  $stale  Правило «набор пора обменять»
+     * @param  string  $caller  Метод для записей журнала
+     */
+    private function resolve(string $sid, \Closure $stale, string $caller): string
+    {
         $set = $this->store->get($sid);
 
         if ($set === null) {
             throw SessionExpiredException::forSid($sid, 'токенов нет в хранилище');
         }
 
-        if (! $this->needsRefresh($set)) {
+        if (! $stale($set)) {
             return $set->accessToken;
         }
 
@@ -54,7 +99,7 @@ final class TokenManager
              * без блокировки нельзя — это ровно тот случай, ради которого
              * она заведена. Остаётся отдать имеющийся токен, если он ещё жив.
              */
-            Log::warning('[TokenManager.accessTokenFor] lock timeout', ['sid' => $sid]);
+            Log::warning('[TokenManager.'.$caller.'] lock timeout', ['sid' => $sid]);
 
             $fresh = $this->store->get($sid);
 
@@ -74,11 +119,11 @@ final class TokenManager
                 throw SessionExpiredException::forSid($sid, 'токены удалены во время ожидания');
             }
 
-            if (! $this->needsRefresh($current)) {
+            if (! $stale($current)) {
                 return $current->accessToken;
             }
 
-            Log::debug('[TokenManager.accessTokenFor] refreshing ahead', [
+            Log::debug('[TokenManager.'.$caller.'] refreshing', [
                 'sid' => $sid,
                 'ttl' => CarbonImmutable::now()->diffInSeconds($current->expiresAt, absolute: false),
             ]);
@@ -86,7 +131,7 @@ final class TokenManager
             try {
                 $new = $this->exchanger->refresh($current);
             } catch (SessionExpiredException $exception) {
-                Log::warning('[TokenManager.accessTokenFor] refresh rejected, destroying session', [
+                Log::warning('[TokenManager.'.$caller.'] refresh rejected, destroying session', [
                     'sid' => $sid,
                 ]);
 
