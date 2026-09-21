@@ -50,7 +50,7 @@ it('shows the dashboard to a signed in user', function (): void {
 
 | Функция | Что делает |
 | --- | --- |
-| `identityFakeHttp(array $extra = [])` | документ обнаружения и набор ключей; `$extra` — свои образцы адресов |
+| `identityFakeHttp(array $extra = [])` | документ обнаружения, набор ключей и обмен токена; `$extra` — свои образцы адресов |
 | `identityFakeNavigation(mixed $userStub = null, mixed $guestStub = null)` | то же плюс обе операции `/api/navigation`: `POST` — рейл вошедшего, `GET` — гостевой |
 | `identityFakeResolve(mixed $stub = null)` | то же плюс ответ `/api/users/resolve` |
 | `identityAuthenticate(string $sid, string $sub, bool $withIdToken = true, array $roles = ['user'], array $entitlements = [])` | сессия входа с токенами в хранилище; `$roles` и `$entitlements` кладутся в токен доступа — оттуда их читает `CurrentIdentity` |
@@ -61,6 +61,39 @@ it('shows the dashboard to a signed in user', function (): void {
 
 Сняв `withIdToken`, вы проверяете путь выхода без пригодной подсказки:
 перенаправление на `/end-session` в этом случае невозможно.
+
+### Обмен токена подделан по умолчанию
+
+`identityFakeHttp()` отвечает и на `/token`, отдавая **тот же** токен, что лежит
+в хранилище: обмен происходит, но утверждения не меняются.
+
+Это нужно потому, что токен обменивается не только по сроку. Посредники прав
+обменивают его перед отказом, а отметка `user.rights.changed` — в начале
+запроса. Без образца подделка отвечала бы на `/token` пустым `200`, набор
+токенов обнулялся бы посреди набора и унёс с собой роль и ограничения —
+проверка отказа объяснила бы причину неверно.
+
+Набору, который проверяет **изменившиеся** права, довольно передать свой
+образец: он побеждает умолчание.
+
+```php
+it('applies a promoted role at once', function (): void {
+    identityFakeHttp([
+        identityBaseUrl().'/token' => Http::response([
+            'access_token' => identityAccessToken(['roles' => ['admin']]),
+            'refresh_token' => 'refresh-new',
+            'expires_in' => 300,
+        ]),
+    ]);
+
+    identityAuthenticate(roles: ['user']);
+
+    $this->get('/settings')->assertOk();
+});
+```
+
+**Ответ обмена без `access_token` считается отказом** и уводит на вход: пустая
+строка в наборе затирала бы рабочий токен вместе с правами.
 
 ## Что стоит проверять в продукте
 
@@ -156,7 +189,7 @@ expect($policy)->toContain('img-src')
 ```
 
 Проверять сам поток кода, обмен токенов, разбор JWKS и потребление сообщений
-продукту **не нужно** — это покрыто прогоном пакета (139 наборов). Продукт
+продукту **не нужно** — это покрыто прогоном пакета (141 набор). Продукт
 проверяет своё: что экраны закрыты, данные доехали и токен не утёк.
 
 ## Браузерные сценарии

@@ -101,8 +101,28 @@ final class TokenExchanger
             throw SessionExpiredException::forSid($sid, $error);
         }
 
-        /** @var array<string, mixed> */
-        return $response->json() ?? [];
+        /** @var array<string, mixed> $body */
+        $body = $response->json() ?? [];
+
+        /*
+         * Успешный ответ **без** токена доступа — отказ, а не обмен.
+         *
+         * Без этой проверки пустая строка уходила бы в набор и затирала
+         * рабочий токен, а вместе с ним роль и ограничения: `withTokens()`
+         * подставляет прежние значения только для refresh- и ID-токена.
+         * Права при этом теряются молча — отказ по ним объяснялся бы
+         * неверной причиной, а не поломкой обмена.
+         */
+        if (! is_string($body['access_token'] ?? null) || $body['access_token'] === '') {
+            Log::error('[TokenExchanger.post] response without an access token', [
+                'grant_type' => $payload['grant_type'],
+                'status' => $response->status(),
+            ]);
+
+            throw SessionExpiredException::forSid($sid, 'ответ обмена без токена доступа');
+        }
+
+        return $body;
     }
 
     /**

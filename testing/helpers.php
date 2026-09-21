@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
+use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Support\Facades\Http;
 use Jose\Component\Core\AlgorithmManager;
 use Jose\Component\Core\JWK;
@@ -161,12 +162,53 @@ function identityAccessToken(array $claims = []): string
 }
 
 /**
- * Ответы установки по умолчанию: документ обнаружения и набор ключей.
+ * Ответы установки по умолчанию: документ обнаружения, набор ключей и обмен.
+ *
+ * **Обмен по умолчанию ничего не меняет** — отдаёт тот же токен доступа,
+ * что лежит в хранилище. Нужен он затем, что токен обменивается не только
+ * по сроку: посредники прав обменивают его перед отказом, а отметка
+ * `user.rights.changed` — в начале запроса. Без этого образца продукт
+ * получал бы на `/token` пустой ответ подделки, и набор токенов обнулялся бы
+ * посреди набора, унося роль и ограничения.
+ *
+ * Свой образец `/token` **побеждает**: он идёт раньше в перечне. Набору,
+ * проверяющему изменившиеся права, довольно передать его в `$extra`.
  *
  * @param  array<string, mixed>  $extra  дополнительные образцы адресов
  */
 function identityFakeHttp(array $extra = []): void
 {
+    $endpoint = identityBaseUrl().'/token';
+
+    /*
+     * Образец обмена добавляется **ключом**, а не через распаковку: одинаковый
+     * ключ в литерале массива затёр бы переданный набором, и явный отказ
+     * обмена подменился бы успехом.
+     */
+    if (! array_key_exists($endpoint, $extra)) {
+        $extra[$endpoint] = static function (): PromiseInterface {
+            $sid = session('identity.sid');
+            $set = is_string($sid) ? app(TokenStore::class)->get($sid) : null;
+
+            if ($set === null) {
+                return Http::response([
+                    'access_token' => identityAccessToken(),
+                    'refresh_token' => 'refresh-current',
+                    'expires_in' => 300,
+                    'scope' => 'openid profile email',
+                ]);
+            }
+
+            return Http::response([
+                'access_token' => $set->accessToken,
+                'refresh_token' => $set->refreshToken,
+                'id_token' => $set->idToken,
+                'expires_in' => 300,
+                'scope' => $set->scope,
+            ]);
+        };
+    }
+
     Http::fake([
         identityBaseUrl().'/.well-known/openid-configuration' => Http::response(identityDiscovery()),
         identityBaseUrl().'/.well-known/jwks.json' => Http::response(identityJwks()),

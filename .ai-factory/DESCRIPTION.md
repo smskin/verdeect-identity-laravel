@@ -56,7 +56,7 @@
 - **Брокер:** `php-amqplib/php-amqplib` 3
 - **Хранилище:** Redis через штатный кэш Laravel (в прогоне — `array`);
   базы данных у пакета нет
-- **Прогон:** `pestphp/pest` 5 + `orchestra/testbench` 11 — 139 наборов,
+- **Прогон:** `pestphp/pest` 5 + `orchestra/testbench` 11 — 141 набор,
   `composer test`
 - **Статический разбор:** PHPStan + Larastan, уровень 7, `composer types:check`
 - **Совместно:** `composer ci:check` — разбор, затем прогон

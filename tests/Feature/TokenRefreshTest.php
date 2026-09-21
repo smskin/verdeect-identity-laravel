@@ -217,3 +217,40 @@ it('destroys session when the forced exchange is refused', function (): void {
 
     expect(app(TokenStore::class)->get('sid-1'))->toBeNull();
 });
+
+/**
+ * Успешный ответ без токена доступа — отказ, а не обмен.
+ *
+ * Пустая строка уходила в набор и затирала рабочий токен, а с ним роль
+ * и ограничения: `withTokens()` подставляет прежние значения только
+ * для refresh- и ID-токена. Права терялись молча, и отказ по ним объяснялся
+ * неверной причиной.
+ */
+it('refuses an exchange response without an access token', function (): void {
+    identityFakeHttp([
+        identityBaseUrl().'/token' => Http::response([
+            'refresh_token' => 'refresh-new',
+            'expires_in' => 300,
+        ]),
+    ]);
+
+    identityStoredTokens(0.1);
+
+    expect(fn () => app(TokenManager::class)->accessTokenFor('sid-1'))
+        ->toThrow(SessionExpiredException::class);
+});
+
+/**
+ * Поддельная установка обменивает токен, **не меняя утверждений**: иначе
+ * набор продукта, дошедший до обмена, остался бы с обнулённым токеном.
+ */
+it('keeps the claims on a default faked exchange', function (): void {
+    identityFakeHttp();
+
+    // Набор ищется по `sid` сессии, как это делает набор продукта.
+    identityAuthenticate();
+
+    $set = identityStoredTokens(0.1);
+
+    expect(app(TokenManager::class)->accessTokenFor('sid-1'))->toBe($set->accessToken);
+});
