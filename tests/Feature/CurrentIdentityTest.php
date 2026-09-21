@@ -230,3 +230,191 @@ it('surfaces a refused exchange instead of reporting no rights', function (): vo
 
     app(CurrentIdentity::class)->allowsWrites();
 })->throws(SessionExpiredException::class);
+
+// ============================================================================
+// Повтор перед отказом
+// ============================================================================
+
+/**
+ * Ответ установки на обмен с заданными правами.
+ *
+ * @param  list<string>  $roles
+ * @param  list<string>  $entitlements
+ */
+function identityRightsExchange(array $roles = ['user'], array $entitlements = []): void
+{
+    identityFakeHttp([
+        identityBaseUrl().'/token' => Http::response([
+            'access_token' => identityAccessToken([
+                'sid' => 'sid-1',
+                'sub' => 'sub-1',
+                'roles' => $roles,
+                'entitlements' => $entitlements,
+            ]),
+            'refresh_token' => 'refresh-new',
+            'expires_in' => 300,
+        ]),
+    ]);
+}
+
+/** Число обращений к эндпоинту выдачи токенов за прогон. */
+function identityRightsExchanges(): int
+{
+    $count = 0;
+
+    Http::recorded(static function ($request) use (&$count): bool {
+        if (str_ends_with($request->url(), '/token')) {
+            $count++;
+        }
+
+        return true;
+    });
+
+    return $count;
+}
+
+/**
+ * Справка 9, «Дополнительно»: повышение роли применяется сразу.
+ *
+ * Сообщение `user.rights.changed` могло задержаться или не дойти вовсе —
+ * потребитель у продукта может быть не поднят. Поэтому перед отказом
+ * посредник обменивает токен и перепроверяет роль.
+ */
+it('lets a promoted role through after a forced exchange', function (): void {
+    identityRightsExchange(roles: ['admin']);
+
+    identityAuthenticate(roles: ['user']);
+
+    identityGuardedRoute([RequireIdentityRole::class.':admin']);
+
+    $this->get('/probe')->assertOk();
+
+    expect(identityRightsExchanges())->toBe(1);
+});
+
+/**
+ * То же для снятого ограничения: запись открывается первым же запросом.
+ */
+it('lets a write through after the restriction is lifted', function (): void {
+    identityRightsExchange(entitlements: []);
+
+    identityAuthenticate(entitlements: ['read_only']);
+
+    identityGuardedRoute([DenyWritesWhenRestricted::class]);
+
+    $this->get('/probe')->assertOk();
+
+    expect(identityRightsExchanges())->toBe(1);
+});
+
+/**
+ * Обмен подтвердил отказ — отказ остаётся отказом, и обмен ровно один.
+ */
+it('refuses when the exchange confirms the denial', function (): void {
+    identityRightsExchange(roles: ['user']);
+
+    identityAuthenticate(roles: ['user']);
+
+    identityGuardedRoute([RequireIdentityRole::class.':admin']);
+
+    $this->get('/probe')->assertForbidden();
+
+    expect(identityRightsExchanges())->toBe(1);
+});
+
+/**
+ * **Дроссель.** Честный отказ — случай обычный, и без дросселя каждая попытка
+ * открыть чужой экран звала бы установку.
+ */
+it('throttles repeated forced exchanges', function (): void {
+    identityRightsExchange(roles: ['user']);
+
+    identityAuthenticate(roles: ['user']);
+
+    identityGuardedRoute([RequireIdentityRole::class.':admin']);
+
+    $this->get('/probe')->assertForbidden();
+    $this->get('/probe')->assertForbidden();
+
+    expect(identityRightsExchanges())->toBe(1);
+});
+
+/**
+ * Обмен без refresh-токена дал бы `SessionExpiredException`, и честный отказ
+ * обернулся бы выходом из продукта. Поэтому обмена нет вовсе.
+ */
+it('keeps the denial when there is nothing to exchange', function (): void {
+    identityRightsExchange(roles: ['admin']);
+
+    identityAuthenticate(roles: ['user']);
+
+    $stored = app(TokenStore::class)->get('sid-1');
+
+    app(TokenStore::class)->put('sid-1', new TokenSet(
+        accessToken: $stored->accessToken,
+        refreshToken: null,
+        idToken: $stored->idToken,
+        issuedAt: $stored->issuedAt,
+        expiresAt: $stored->expiresAt,
+        scope: $stored->scope,
+        sid: $stored->sid,
+        sub: $stored->sub,
+    ));
+
+    identityGuardedRoute([RequireIdentityRole::class.':admin']);
+
+    $this->get('/probe')->assertForbidden();
+
+    expect(identityRightsExchanges())->toBe(0)
+        ->and(session()->get('identity.sid'))->toBe('sid-1');
+});
+
+/**
+ * Гость до посредника роли доходит только без `RequireIdentitySession`
+ * впереди, и обменивать ему нечего: сессии нет.
+ */
+it('refuses a guest without calling identity', function (): void {
+    identityFakeHttp();
+
+    identityGuardedRoute([RequireIdentityRole::class.':admin']);
+
+    $this->get('/probe')->assertForbidden();
+
+    expect(identityRightsExchanges())->toBe(0);
+});
+
+/**
+ * Установка отвергла обмен: человек не «без прав», а больше не вошёл —
+ * и уходит на форму входа, а не получает отказ.
+ */
+it('sends the visitor to login when the exchange is refused', function (): void {
+    identityFakeHttp([
+        identityBaseUrl().'/token' => Http::response(['error' => 'invalid_grant'], 400),
+    ]);
+
+    identityAuthenticate(roles: ['user']);
+
+    identityGuardedRoute([RequireIdentityRole::class.':admin']);
+
+    $this->get('/probe')->assertRedirect(route('identity.login'));
+
+    expect(session()->has('identity.sid'))->toBeFalse();
+});
+
+/**
+ * Недоступность установки не роняет страницу (`DESCRIPTION.md`): отказ
+ * остаётся отказом, а не превращается в `500`.
+ */
+it('keeps the denial when identity is unreachable', function (): void {
+    Http::fake([
+        identityBaseUrl().'/.well-known/openid-configuration' => Http::response('', 500),
+    ]);
+
+    identityAuthenticate(roles: ['user']);
+
+    identityGuardedRoute([RequireIdentityRole::class.':admin']);
+
+    $this->get('/probe')->assertForbidden();
+
+    expect(session()->get('identity.sid'))->toBe('sid-1');
+});

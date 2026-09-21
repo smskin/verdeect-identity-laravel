@@ -273,3 +273,56 @@ it('acknowledges an unknown type without acting', function (): void {
 
     expect($handled)->toBeFalse();
 });
+
+/*
+|--------------------------------------------------------------------------
+| Отметка устаревших прав
+|--------------------------------------------------------------------------
+*/
+
+/**
+ * Права живут в токене доступа, а не в сессии, поэтому повышение роли
+ * доходит до продукта только обменом. Сообщение ставит отметку; обмен
+ * выполняет ближайший запрос пользователя (справка 9, пункт 2).
+ */
+it('marks rights stale on rights change', function (): void {
+    identityFakeNavigation();
+
+    $at = CarbonImmutable::now();
+
+    app(IdentityEventDispatcher::class)->dispatch(
+        identityEvent(IdentityEventDispatcher::TYPE_RIGHTS_CHANGED, [
+            'sub' => 'sub-1',
+            'occurred_at' => $at->toIso8601String(),
+        ]),
+    );
+
+    $marks = app(SessionMarks::class);
+
+    // Отметка хранится строкой ISO-8601, то есть с точностью до секунды.
+    expect($marks->rightsMark('sub-1')?->toIso8601String())->toBe($at->toIso8601String())
+        ->and($marks->rightsMark('sub-2'))->toBeNull();
+});
+
+/**
+ * **Отметка прав сессию не гасит.** Изменение роли — повод обменять токен,
+ * а не выгонять человека: иначе повышение в правах выбрасывало бы его
+ * из продукта.
+ */
+it('does not destroy the session on rights change', function (): void {
+    identityFakeHttp();
+    identityAuthenticate('sid-1', 'sub-1');
+
+    session(['identity.authenticated_at' => CarbonImmutable::now()->subMinute()->toIso8601String()]);
+
+    app(IdentityEventDispatcher::class)->dispatch(
+        identityEvent(IdentityEventDispatcher::TYPE_RIGHTS_CHANGED, ['sub' => 'sub-1']),
+    );
+
+    Route::middleware(['web', EnforceSessionMarks::class, RequireIdentitySession::class])
+        ->get('/probe-rights', static fn (): string => 'ok');
+
+    $this->get('/probe-rights')->assertOk();
+
+    expect(session()->get('identity.sid'))->toBe('sid-1');
+});
