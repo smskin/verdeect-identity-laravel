@@ -7,6 +7,7 @@ namespace Verdeect\IdentityIntegration\Tokens;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Log;
+use Verdeect\IdentityIntegration\Exceptions\IdentityUnavailableException;
 use Verdeect\IdentityIntegration\Exceptions\SessionExpiredException;
 use Verdeect\IdentityIntegration\Support\IdentityCache;
 use Verdeect\IdentityIntegration\Support\IdentityConfig;
@@ -138,6 +139,23 @@ final class TokenManager
                 $this->store->forget($sid);
 
                 throw $exception;
+            } catch (IdentityUnavailableException) {
+                /*
+                 * Установка молчит, а не отказывает: набор не уничтожается,
+                 * refresh-токен остаётся годным для следующей попытки.
+                 * Живой токен отдаётся как есть — как и при таймауте
+                 * блокировки выше; иначе минутный сбой установки ронял бы
+                 * каждую страницу продукта.
+                 */
+                Log::warning('[TokenManager.'.$caller.'] identity unavailable, keeping current token', [
+                    'sid' => $sid,
+                ]);
+
+                if ($current->expiresAt->isFuture()) {
+                    return $current->accessToken;
+                }
+
+                throw SessionExpiredException::forSid($sid, 'установка не ответила на обмен токена');
             }
 
             $this->store->put($sid, $new);

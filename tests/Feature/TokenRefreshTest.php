@@ -254,3 +254,30 @@ it('keeps the claims on a default faked exchange', function (): void {
 
     expect(app(TokenManager::class)->accessTokenFor('sid-1'))->toBe($set->accessToken);
 });
+
+/**
+ * Минутный сбой установки не роняет страницы: пока токен жив, он
+ * отдаётся как есть, а набор с refresh-токеном остаётся для следующей
+ * попытки.
+ */
+it('keeps a live token when the token endpoint does not respond', function (): void {
+    identityFakeHttp([
+        identityBaseUrl().'/token' => Http::failedConnection('cURL error 28: Operation timed out'),
+    ]);
+
+    identityStoredTokens(0.25);
+
+    expect(app(TokenManager::class)->accessTokenFor('sid-1'))->toBe('access-current')
+        ->and(app(TokenStore::class)->get('sid-1')?->refreshToken)->toBe('refresh-current');
+});
+
+it('ends an expired session when the token endpoint does not respond', function (): void {
+    identityFakeHttp([
+        identityBaseUrl().'/token' => Http::failedConnection('cURL error 28: Operation timed out'),
+    ]);
+
+    identityStoredTokens(-0.1);
+
+    expect(fn () => app(TokenManager::class)->accessTokenFor('sid-1'))
+        ->toThrow(SessionExpiredException::class);
+});

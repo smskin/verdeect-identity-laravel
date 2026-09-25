@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Verdeect\IdentityIntegration\Tokens;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Log;
 use Verdeect\IdentityIntegration\Discovery\IDiscoveryClient;
+use Verdeect\IdentityIntegration\Exceptions\IdentityUnavailableException;
 use Verdeect\IdentityIntegration\Exceptions\SessionExpiredException;
 use Verdeect\IdentityIntegration\Support\IdentityConfig;
 use Verdeect\IdentityIntegration\Support\IdentityHttp;
@@ -70,13 +72,28 @@ final class TokenExchanger
     {
         $endpoint = $this->discovery->fetch()->tokenEndpoint;
 
-        $response = $this->http->request()
-            ->asForm()
-            ->withBasicAuth(
-                $this->config->webClientId(),
-                $this->config->webClientSecret(),
-            )
-            ->post($endpoint, $payload);
+        /*
+         * Обрыв соединения и таймаут — не отказ установки, а её молчание.
+         * Без перевода в отказ пакета исключение HTTP-клиента дошло бы
+         * до продукта необработанным, и возврат из входа отдал бы 500.
+         */
+        try {
+            $response = $this->http->request()
+                ->asForm()
+                ->withBasicAuth(
+                    $this->config->webClientId(),
+                    $this->config->webClientSecret(),
+                )
+                ->post($endpoint, $payload);
+        } catch (ConnectionException $exception) {
+            Log::error('[TokenExchanger.post] token endpoint unreachable', [
+                'grant_type' => $payload['grant_type'],
+                'endpoint' => $endpoint,
+                'reason' => $exception->getMessage(),
+            ]);
+
+            throw IdentityUnavailableException::tokenEndpoint($exception->getMessage());
+        }
 
         if ($response->status() === 401) {
             Log::error('[TokenExchanger.post] client auth failed');

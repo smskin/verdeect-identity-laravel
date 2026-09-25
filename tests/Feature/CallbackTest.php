@@ -142,3 +142,35 @@ it('returns to the intended url', function (): void {
         ->get('/auth/callback?code=abc&state=expected-state')
         ->assertRedirect('/houses/7');
 });
+
+/**
+ * Молчание установки — не 500: исключение HTTP-клиента не должно дойти
+ * до продукта, а поток входа забывается, чтобы повтор начался заново.
+ */
+it('answers 503 when the token endpoint does not respond', function (): void {
+    identityFakeHttp([
+        identityBaseUrl().'/token' => Http::failedConnection('cURL error 28: Operation timed out'),
+    ]);
+
+    $this->withSession([AuthorizationFlow::SESSION_KEY => identityPendingFlow()])
+        ->get('/auth/callback?code=abc&state=expected-state')
+        ->assertStatus(503);
+
+    expect(session()->has(AuthorizationFlow::SESSION_KEY))->toBeFalse();
+});
+
+/**
+ * Повторно открытый адрес возврата предъявляет уже погашенный код:
+ * это отказ установки, а не сбой продукта.
+ */
+it('answers 400 when the code exchange is rejected', function (): void {
+    identityFakeHttp([
+        identityBaseUrl().'/token' => Http::response(['error' => 'invalid_grant'], 400),
+    ]);
+
+    $this->withSession([AuthorizationFlow::SESSION_KEY => identityPendingFlow()])
+        ->get('/auth/callback?code=abc&state=expected-state')
+        ->assertStatus(400);
+
+    expect(session()->has(AuthorizationFlow::SESSION_KEY))->toBeFalse();
+});

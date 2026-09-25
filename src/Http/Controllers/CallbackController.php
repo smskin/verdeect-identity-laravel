@@ -9,7 +9,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Verdeect\IdentityIntegration\Discovery\IdTokenVerifier;
+use Verdeect\IdentityIntegration\Exceptions\DiscoveryException;
+use Verdeect\IdentityIntegration\Exceptions\IdentityUnavailableException;
 use Verdeect\IdentityIntegration\Exceptions\IdTokenException;
+use Verdeect\IdentityIntegration\Exceptions\SessionExpiredException;
 use Verdeect\IdentityIntegration\Flow\AuthorizationFlow;
 use Verdeect\IdentityIntegration\Session\IdentitySession;
 use Verdeect\IdentityIntegration\Tokens\AccessTokenClaims;
@@ -74,7 +77,29 @@ final readonly class CallbackController
             throw new HttpException(400, 'Установка не вернула код авторизации.');
         }
 
-        $set = $this->exchanger->exchangeCode($code, $pending['verifier']);
+        /*
+         * Молчание установки и её отказ в обмене — разные ответы: первое
+         * проходит повтором через минуту (503), второе значит, что код
+         * уже не годится (400). Поток забывается в обоих случаях: код
+         * одноразовый, и повтор начинается новым входом.
+         */
+        try {
+            $set = $this->exchanger->exchangeCode($code, $pending['verifier']);
+        } catch (IdentityUnavailableException|DiscoveryException) {
+            $this->flow->forget();
+
+            Log::warning('[CallbackController] identity unavailable during code exchange');
+
+            throw new HttpException(503, 'Сервис входа не ответил вовремя. Повторите вход через минуту.');
+        } catch (SessionExpiredException $exception) {
+            $this->flow->forget();
+
+            Log::warning('[CallbackController] code exchange rejected', [
+                'reason' => $exception->getMessage(),
+            ]);
+
+            throw new HttpException(400, 'Установка отклонила код авторизации. Повторите вход.');
+        }
 
         if ($set->idToken === null) {
             $this->flow->forget();
